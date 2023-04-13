@@ -1,0 +1,4 @@
+pandas
+imagehash
+opencv-contrib-python
+Pillow
