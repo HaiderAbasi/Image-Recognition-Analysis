@@ -3,7 +3,18 @@
 
 ## Overview
 
-This repository contains the code for analyzing a dataset of ca. 25,000 pictures for an academic study. The main goal of the project is to identify the number of unique images and the number of duplicates in the dataset. Additionally, the project aims to extract several features from the images, including the dominant color, saturation, brightness, presence of humans, age category of humans, facial expressions, and general sentiment.
+This project involves analyzing a dataset of approximately 25,000 images for an academic study. 
+
+- The main objective is to identify the number of unique images and the number of duplicates in the dataset. 
+- Additionally, the project aims to extract several features from the images, which include:
+
+  - Dominant color
+  - Saturation
+  - Brightness
+  - Presence of humans
+  - Age category of humans
+  - Facial expressions
+  - General sentiment
 
 ## Installation
 

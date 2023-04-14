@@ -32,14 +32,15 @@ def main():
 
     # Initialize an empty list to store the unique image ids and the number of duplicates
     data = []
-
     # Iterate over the dictionary of image hashes
     for img_hash, filenames in hashes.items():
-        # Store the unique image id in the list
-        data.append({'image_id': filenames[0], 'num_duplicates': len(filenames)-1})
+        # Iterate over the list of filenames and add the duplicates to the CSV file
+        for i in range(len(filenames)):
+            duplicate_of = filenames[0] if i > 0 else "-"
+            data.append({'image_id': filenames[i], 'duplicate_of': duplicate_of})
 
     # Create the dataframe from the list of data
-    df = pd.DataFrame(data, columns=['image_id', 'num_duplicates'])
+    df = pd.DataFrame(data, columns=['image_id', 'duplicate_of'])
     
     # Write the dataframe to a CSV file
     df.to_csv(config.csv_ptest, index=False)
