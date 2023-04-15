@@ -30,13 +30,13 @@ pip install -r requirements.txt
 
 ## Usage
 
-To run the analysis on the dataset, simply run the `a_find_uniques_parallel.py` script in the `src/milestone_1_find_unique_images`. 
+To run the analysis on the dataset, simply run the `src/main_parallel.py`. 
 
 Once the analysis is complete, a CSV file called `image_duplicates_{case}.csv` will be generated in the `data/processed`, which contains the image IDs and their corresponding feature values.
 
 ### Visualization
 - To visualize the unqiue images and their # of duplicates. 
-  - Simply run `a_display_unique_imgs.py` after generating the `.csv` file by the above step.
+  - Simply run `display_unique_imgs.py` after generating the `.csv` file by the above step.
 
 ## Repo Structure
 
@@ -45,11 +45,15 @@ Image-Recognition-Analysis
 |
 |
 ├───src                                 >     Code Scripts for each milestones
-│  └──milestone_1_find_unique_images       
-|
+│  ├──milestone_1      
+|  .      
+|  └──milestone_x  
 |
 ├───config.py                           >     Control variables for test + disp
 |
+|
+├───main.py                             >     Main file to perform analysis on the unique images
+├───main_parallel.py                    >     -multiprocessing enabled-
 |
 ├──data                                 >     Input(raw) data + intermediate results (processed)
 │  ├──processed
@@ -58,7 +62,9 @@ Image-Recognition-Analysis
 │     └──test_full
 |
 ├──results                              >     Complete output for each milestone (.csv + timing + visualization)
-│  └──milestone_1_find_unique_images
+│  ├──milestone_1
+|  .      
+|  └──milestone_x   
 |
 └──Readme.MD                            >     Self Explanatory XD
 ```
@@ -69,6 +75,7 @@ This project was developed as part of an academic study and was made possible by
 
 - The [OpenCV](https://opencv.org/) library for image processing.
 - The [imagehash](https://github.com/JohannesBuchner/imagehash) library for Perceptual Image Hashing.
+- The [ColorThief](https://github.com/fengsp/color-thief-py) library for color palette extraction.
 
 ## License
 

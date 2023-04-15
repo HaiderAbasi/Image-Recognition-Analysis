@@ -2,6 +2,7 @@ import cv2
 import os
 import config
 import pandas as pd
+import ast
 
 # Load the CSV file into a DataFrame
 df = pd.read_csv(config.csv_display)
@@ -18,6 +19,7 @@ total_duplicates = duplicate_counts.sum() - duplicate_counts.get('-')
 # Loop through each unique image and display its duplicate count
 for index, row in unique_images.iterrows():
     id = row['image_id']
+    
     num_duplicates = duplicate_counts.get(id, 0)
     
     # Load the image
@@ -36,6 +38,7 @@ for index, row in unique_images.iterrows():
     rect_y = 10
     rect_w = text_size[0] + 20
     rect_h = text_size[1] + 20
+
     cv2.rectangle(img, (rect_x, rect_y), (rect_x + rect_w, rect_y + rect_h), (0, 0, 0), -1)
     cv2.putText(img, text, (text_x, text_y), font, font_scale, (0, 255, 0), font_thickness)
 

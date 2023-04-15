@@ -14,7 +14,7 @@ def calculate_hash(img_path):
     img_hash = str(imagehash.average_hash(img))
     return img_hash, os.path.basename(img_path)
 
-def main():
+def identify_duplicates_nd_updates_csv(csv = config.csv_ptest):
 
     # Get a list of image paths
     img_paths = [os.path.join(config.data_dir, filename) for filename in os.listdir(config.data_dir)]
@@ -43,11 +43,12 @@ def main():
     df = pd.DataFrame(data, columns=['image_id', 'duplicate_of'])
     
     # Write the dataframe to a CSV file
-    df.to_csv(config.csv_ptest, index=False)
+    df.to_csv(csv, index=False)
+
 
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     start = time.time()
-    main()
+    identify_duplicates_nd_updates_csv()
     print(f"Time it took to process find duplicates is {time.time()-start} secs")

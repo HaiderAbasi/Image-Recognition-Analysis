@@ -11,8 +11,6 @@ start = time.time()
 # Initialize an empty dictionary to store the image hashes
 hashes = {}
 
-#data_dir = r'data\raw\test' + config.case
-
 # Iterate over all the images in the folder
 for filename in os.listdir(config.data_dir):
     # Read the image file
