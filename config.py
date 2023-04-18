@@ -1,7 +1,7 @@
 # Config file for Image Recognition Analysis Repo.
 
-common_case = "_full"
-
+common_case = ""
+display = False
 # Main Variables
 
 

@@ -36,7 +36,7 @@ def identify_sat_brightness_levels(img):
         brightness_level = 'High'
         
     # Return the saturation and brightness levels
-    return saturation_level, brightness_level
+    return avg_saturation,avg_brightness,saturation_level, brightness_level
 
         
         
@@ -46,9 +46,9 @@ def perform_color_analysis(img,img_path):
     
 
     
-    sat_level,brightness_level = identify_sat_brightness_levels(img)
+    saturation,brightness,sat_level,brightness_level = identify_sat_brightness_levels(img)
     
     
-    return dominant_color,sat_level,brightness_level
+    return dominant_color,saturation,sat_level,brightness,brightness_level
         
 

@@ -5,30 +5,77 @@ import time
 import os
 import cv2
 import config
-
+import math
+import gdown
 from PIL import Image
 
 from milestone_1.img_duplicate_checker_fast import identify_duplicates_nd_updates_csv
 from milestone_2.color_analysis import perform_color_analysis
+from milestone_3.people_counter import PeopleCounter,args
+from milestone_3.age_classification import AgeClassifier
+
+from utilities import put_Text,padded_resize
 
 
-# Define the function to process each image
-def analyze_img(row):
-    image_id = row['image_id']
-    # Load the image
-    img_path = os.path.join(config.data_dir, image_id)
-    img = Image.open(img_path)
-
-    # Milestone 2: Perform image color Analysis
-    dominant_clr, sat_level, brightness_level = perform_color_analysis(img,img_path)
+class ImageAnalysis:
     
-    # Return the result as a tuple
-    return (image_id, dominant_clr, sat_level, brightness_level)
+    def __init__(self):    
+        self.pc = PeopleCounter()
+        self.img = None        
+        
+           
+    # Define the function to process each image
+    def analyze(self,row):
+        image_id = row['image_id']
+        # Load the image
+        img_path = os.path.join(config.data_dir, image_id)
+        self.img = Image.open(img_path)
+
+        if 'dominant_clr' not in row.index:
+            # Milestone 2: Perform image color Analysis
+            dominant_clr, saturation,sat_level,brightness, brightness_level = perform_color_analysis(self.img,img_path)
+        else:
+            dominant_clr = row['dominant_clr']
+            saturation = row['saturation']
+            sat_level = row['sat_level']
+            brightness = row['brightness']
+            brightness_level = row['brightness_level']
+        
+        people_boxes = self.pc.count(img_path)
+        
+        # Return the result as a tuple
+        return (image_id, dominant_clr, saturation,sat_level, brightness,brightness_level,people_boxes)
+
+
+def download_missing_model_files():
+    """Download missing model files from Google Drive."""
+    models_dir = os.path.join(os.getcwd(), 'data', 'models')
+    model_files = ['yolox_s.pth', 'yolox_nano.pth', 'mobilenet_v2_adult_child_classifier.h5']  # replace with actual file names
+    files_id = ['1N9Ymq95gPszQ94mAxgEUPc3Z9R5P-_nM', '1rcOHMnxXHVQ3fhMpGtsvalXY6GMu1SEA', '1VxfBUWe2VJgvNps-t3ccwoM7ccSMJzMW']  # replace with actual file names
+    
+    for i, file in enumerate(model_files):
+        file_path = os.path.join(models_dir, file)
+        if not os.path.exists(file_path):
+            print(f'{file} not found. Downloading from Google Drive...')
+            file_id = files_id[i]  # replace with the actual file ID from the Google Drive link
+            url = f'https://drive.google.com/uc?id={file_id}'
+            gdown.download(url, file_path, quiet=False)
+            print(f'{file} downloaded successfully!')
 
 
 def main():
-    # Task 1: Create csv by writing all images ids with their respective duplicate on second column
-    identify_duplicates_nd_updates_csv()
+    # Download required model files
+    download_missing_model_files()
+    
+    #args.nms =0.45
+    args.conf = 0.5
+
+    image_analysis = ImageAnalysis()
+    age_classifier = AgeClassifier()
+
+    if not os.path.isfile(config.csv_ptest):
+        # Task 1: Create csv by writing all images ids with their respective duplicate on second column
+        identify_duplicates_nd_updates_csv()
     
     # Load the CSV file into a DataFrame
     df = pd.read_csv(config.csv_ptest)
@@ -36,23 +83,48 @@ def main():
     # Select rows where duplicate_of is '-'
     unique_images = df.loc[df['duplicate_of'] == '-']
 
-    display = False
     # Create a ProcessPoolExecutor with the specified number of workers
     with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
-        futures = [executor.submit(analyze_img, row) for _, row in unique_images.iterrows()]
+        futures = [executor.submit(image_analysis.analyze, row) for _, row in unique_images.iterrows()]
         for future in concurrent.futures.as_completed(futures):
-            image_id, dominant_clr, sat_level, brightness_level = future.result()
+            image_id, dominant_clr, sat,sat_level, brightness, brightness_level,people_boxes = future.result()
             
+            # Load the image
+            img_path = os.path.join(config.data_dir, image_id)
+            img = Image.open(img_path)
+            adults = 0
+            children = 0
+            for x,y,x2,y2 in people_boxes:
+                person = img.crop((x, y, x2, y2))
+                class_id = age_classifier.predict(person)
+                if class_id ==0:
+                    adults +=1
+                else:
+                    children +=1
+
             # Add a new column for the dominant color
             df.loc[(df['image_id'] == image_id) | (df['duplicate_of'] == image_id), 'dominant_clr'] = str(dominant_clr)
+
+            # Add a new column for the saturation
+            df.loc[(df['image_id'] == image_id) | (df['duplicate_of'] == image_id), 'saturation'] = sat
 
             # Add a new column for the max saturation
             df.loc[(df['image_id'] == image_id) | (df['duplicate_of'] == image_id), 'sat_level'] = sat_level
 
             # Add a new column for the max brightness
+            df.loc[(df['image_id'] == image_id) | (df['duplicate_of'] == image_id), 'brightness'] = brightness
+
+            # Add a new column for the max brightness
             df.loc[(df['image_id'] == image_id) | (df['duplicate_of'] == image_id), 'brightness_level'] = brightness_level
-        
-            if display:
+
+            # Add a new column for the max brightness
+            df.loc[(df['image_id'] == image_id) | (df['duplicate_of'] == image_id), 'Adults'] = adults
+
+            # Add a new column for the max brightness
+            df.loc[(df['image_id'] == image_id) | (df['duplicate_of'] == image_id), 'Children'] = children
+
+
+            if config.display:
                 # Load the image
                 img_path = os.path.join(config.data_dir, image_id)
                 img = Image.open(img_path)
@@ -60,32 +132,26 @@ def main():
                 cv_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
                 
                 # Add the number of duplicates on the top right corner of the image
-                text = f"(Color,Sat,Brig): {dominant_clr, sat_level, brightness_level}"
-                font = cv2.FONT_HERSHEY_SIMPLEX
-                font_scale = 0.5
-                font_thickness = 1
-                text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
-                text_x = cv_img.shape[1] - text_size[0] - 20
-                text_y = text_size[1] + 20
-                rect_x = cv_img.shape[1] - text_size[0] - 30
-                rect_y = 10
-                rect_w = text_size[0] + 20
-                rect_h = text_size[1] + 20
-                cv2.rectangle(cv_img, (rect_x, rect_y), (rect_x + rect_w, rect_y + rect_h), (0, 0, 0), -1)
-                r,g,b = dominant_clr
-                cv2.rectangle(cv_img, (rect_x-rect_h, rect_y), (rect_x, rect_y + rect_h), (b,g,r), -1)
-                cv2.rectangle(cv_img, (rect_x-rect_h, rect_y), (rect_x, rect_y + rect_h), (0,0,0), 3)
-                cv2.putText(cv_img, text, (text_x, text_y), font, font_scale, (0, 255, 0), font_thickness)
+                img_analysis_str = f"(Color,Sat,Brig): {dominant_clr, sat_level, brightness_level}\n{adults+children} People ({adults} adults & {children} children)"
+
+                # Resize image to default size
+                cv_img = padded_resize(cv_img, (750,350))
+
+                put_Text(cv_img,img_analysis_str,(10,10),bg_color=(0,0,0))
 
                 # Display the image
-                cv2.imshow('Unique-img (ColorAnalysis)', cv_img)
+                cv2.imshow('Unique-img', cv_img)
                 k = cv2.waitKey(0)
                 if k==27:
                     break
         
 
-    if not display:
+    if not config.display:
         # Write the dataframe to a CSV file
+        df['saturation'] = df['saturation'].astype(int)
+        df['brightness'] = df['brightness'].astype(int)
+        df['Adults'] = df['Adults'].astype(int)
+        df['Children'] = df['Children'].astype(int)
         df.to_csv(config.csv_ptest, index=False)
     else:
         cv2.destroyAllWindows()
@@ -97,4 +163,4 @@ def main():
 if __name__ == '__main__':
     start = time.time()
     main()
-    print(f"Time it took to perform color-analysis is {time.time()-start} secs")
+    print(f"Time it took to perform human-detection is {time.time()-start} secs")

@@ -3,3 +3,5 @@ imagehash
 opencv-contrib-python
 Pillow
 colorthief
+tensorflow
+gdown
