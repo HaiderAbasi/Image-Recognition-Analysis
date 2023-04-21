@@ -5,3 +5,6 @@ Pillow
 colorthief
 tensorflow
 gdown
+deepface
+torch
+torchvision

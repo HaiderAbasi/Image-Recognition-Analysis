@@ -88,43 +88,62 @@ class Predictor(object):
                 self.nmsthre, class_agnostic=True
             )
             
-            # filter output boxes to keep only persons
-            if outputs is not None and len(outputs) > 0:
-                person_boxes = [] # list of detections[tensors]
-                for output in outputs:
-                    if output is not None:
-                        mask = (output[:, 6] == 0)
-                        person_boxes.append(output[mask])
-                outputs = person_boxes if len(person_boxes)>0 else [None]
+            # # filter output boxes to keep only persons
+            # if outputs is not None and len(outputs) > 0:
+            #     person_boxes = [] # list of detections[tensors]
+            #     for output in outputs:
+            #         if output is not None:
+            #             mask = (output[:, 6] == 0)
+            #             person_boxes.append(output[mask])
+            #     outputs = person_boxes if len(person_boxes)>0 else [None]
 
             if self.log:
                 logger.info("Infer time: {:.4f}s".format(time.time() - t0))
         return outputs, img_info
 
-    def visual(self, output, img_info, cls_conf=0.35):
+    def visual(self, outputs, img_info, cls_conf=0.35):
         ratio = img_info["ratio"]
         img = img_info["raw_img"]
-        if output is None:
-            return img,[]
-        output = output.cpu()
+        if outputs is None:
+            return img,[],"-"
+        outputs = outputs.cpu()
 
-        bboxes = output[:, 0:4]
+        bboxes = outputs[:, 0:4]
 
         # preprocessing: resize
         bboxes /= ratio
 
-        cls = output[:, 6]
-        scores = output[:, 4] * output[:, 5]
+        cls = outputs[:, 6]
+        scores = outputs[:, 4] * outputs[:, 5]
 
         vis_res = vis(img, bboxes, scores, cls, cls_conf, self.cls_names)
+
+        # find the indices of non-person boxes
+        non_person_idxs = torch.where(cls != 0)[0]
+
+        if len(non_person_idxs) > 0:
+            # compute size of each non-person bounding box
+            non_person_sizes = (bboxes[non_person_idxs, 2] - bboxes[non_person_idxs, 0]) * (bboxes[non_person_idxs, 3] - bboxes[non_person_idxs, 1])
+
+            # find the index of the largest non-person box
+            largest_non_person_idx = non_person_idxs[torch.argmax(non_person_sizes)]
+
+            # get class of object with largest non-person box
+            largest_non_person_id = int(cls[largest_non_person_idx])
+            focus_subject = self.cls_names[largest_non_person_id]
+
+            #print("focus_subject:", focus_subject)
+        else:
+            focus_subject = "-"
+            #print("No non-person boxes in image")
                 
-        people_boxes = [bboxes[idx].long().numpy() for idx, score in enumerate(scores) if score > cls_conf]
+        people_boxes = [bboxes[idx].long().numpy() for idx, score in enumerate(scores) if score > cls_conf and cls[idx] == 0]
         # people_count = sum(score > cls_conf for score in scores)
         # if torch.is_tensor(people_count):
         #     people_count = int(people_count.item())
         # Convert tensor to numpy array
             
-        return vis_res,people_boxes
+        return vis_res,people_boxes,focus_subject
 
 
 class PeopleCounter():
@@ -138,7 +157,7 @@ class PeopleCounter():
             args.experiment_name = exp.exp_name
 
         file_name = os.path.join(exp.output_dir, args.experiment_name)
-        os.makedirs(file_name, exist_ok=True)
+        #os.makedirs(file_name, exist_ok=True)
         
         if self.log:
             logger.info("Args: {}".format(args))
@@ -204,7 +223,7 @@ class PeopleCounter():
         files.sort()
         for image_name in files:
             outputs, img_info = self.predictor.inference(image_name)
-            result_image,people_boxes = self.predictor.visual(outputs[0], img_info, self.predictor.confthre)
+            result_image,people_boxes,focus_subject = self.predictor.visual(outputs[0], img_info, self.predictor.confthre)
                 
             if self.draw:
                 for x,y,x2,y2 in people_boxes:
@@ -216,7 +235,7 @@ class PeopleCounter():
                 if ch == 27 or ch == ord("q") or ch == ord("Q"):
                     break
                 
-        return people_boxes
+        return people_boxes,focus_subject
 
 
 

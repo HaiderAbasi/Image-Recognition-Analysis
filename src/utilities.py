@@ -26,14 +26,15 @@ def padded_resize(img, new_size):
 
     return padded
 
-
+putText_endcol = None
+putText_row = None
 
 def put_Text(
     img,
     text,
     uv_top_left,
     bg_color=(255, 255, 255),
-    text_color=(255, 255, 255),
+    text_color="mixed",
     fontScale=0.6,
     thickness=1,
     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
@@ -43,6 +44,7 @@ def put_Text(
     """
     Draws multiline with an outline and a background slightly larger than the text.
     """
+    global putText_endcol,putText_row
     assert isinstance(text, str)
 
     uv_top_left = np.array(uv_top_left, dtype=float)
@@ -65,6 +67,8 @@ def put_Text(
     bg_top_left = uv_top_left - [5, 5]
     bg_bottom_right = bg_top_left + bg_size
 
+    putText_endcol = bg_bottom_right.astype(int)[0]
+    putText_row = int((bg_top_left[1] + bg_bottom_right[1])/2)
     # Draw the background box
     cv2.rectangle(
         img=img,
@@ -73,9 +77,24 @@ def put_Text(
         color=bg_color,
         thickness=-1,
     )
+    # # Draw the background box
+    # cv2.rectangle(
+    #     img=img,
+    #     pt1=tuple(bg_top_left.astype(int)),
+    #     pt2=tuple(bg_bottom_right.astype(int)),
+    #     color=(52,78,247),
+    #     thickness=2,
+    # )
+    
+    color_list = [
+        (255, 0, 255),
+        (0, 204, 0),
+        (255, 255, 51),
+        (0, 255, 255)
+        ]
 
     # Draw the text
-    for line in text.splitlines():
+    for i, line in enumerate(text.splitlines()):
         (w, h), _ = cv2.getTextSize(
             text=line,
             fontFace=fontFace,
@@ -93,18 +112,43 @@ def put_Text(
                 fontFace=fontFace,
                 fontScale=fontScale,
                 color=outline_color,
-                thickness=thickness * 3,
+                thickness=thickness ,
                 lineType=cv2.LINE_AA,
             )
+        
+        txt_color = text_color
+        if text_color == "mixed":
+            txt_color = color_list[i]
+        
         cv2.putText(
             img,
             text=line,
             org=org,
             fontFace=fontFace,
             fontScale=fontScale,
-            color=text_color,
+            color=txt_color,
             thickness=thickness,
             lineType=cv2.LINE_AA,
         )
 
         uv_top_left += [0, h * line_spacing]
+
+
+def show_clr(cv_img,dominant_clr,clr):
+
+    color_loc = (putText_endcol + 40,putText_row + 5)
+    # Add the number of duplicates on the top right corner of the image
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.6
+    font_thickness = 1
+    r, g, b = dominant_clr
+    text_size, _ = cv2.getTextSize(clr, font, font_scale, font_thickness)
+
+    rect_x = color_loc[0] - 20
+    rect_y = color_loc[1] - 20
+    rect_w = text_size[0] + 30
+    cv2.rectangle(cv_img,(rect_x,rect_y), (rect_x+rect_w, color_loc[1]+10), (255,255,255), -1)
+    cv2.putText(cv_img, clr,color_loc,font,font_scale,(0,0,0),2)
+
+    cv2.rectangle(cv_img, (color_loc[0]-40,color_loc[1]-20), (color_loc[0]-10,color_loc[1]+10), (b,g,r), -1)
+    cv2.rectangle(cv_img, (color_loc[0]-40,color_loc[1]-20), (color_loc[0]-10,color_loc[1]+10), (0,0,0), 3)

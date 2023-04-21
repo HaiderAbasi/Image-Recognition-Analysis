@@ -4,7 +4,11 @@ import config
 import pandas as pd
 import ast
 
-from src.utilities import put_Text,padded_resize
+from src.utilities import put_Text,padded_resize,show_clr
+
+from src.milestone_4.visual_sentiment_analysis import SentimentAnalyzer
+
+s_analyzer = SentimentAnalyzer()
 
 # Load the CSV file into a DataFrame
 df = pd.read_csv(config.csv_display)
@@ -30,6 +34,10 @@ for index, row in unique_images.iterrows():
 
     adults = row['Adults']
     children = row['Children']
+    
+    human_emotion = row['human_emotion']
+    image_sentiment = row['image_sentiment']
+    focus_subject = row['focus_subject']
 
     r,g,b= dominant_clr
     num_duplicates = duplicate_counts.get(id, 0)
@@ -39,12 +47,15 @@ for index, row in unique_images.iterrows():
     img = cv2.imread(img_path)
 
     # Add the number of duplicates on the top right corner of the image
-    img_analysis_str = f"(Color,Sat,Brig): {dominant_clr, sat_level, brightness_level}\n{adults+children} People ({adults} adults & {children} children)"
+    img_analysis_str = f"(Color,Sat,Brig): {dominant_clr, sat_level, brightness_level}\n{adults+children} People ({adults} adults & {children} children)\nHuman emotion: {human_emotion} - Image sentiment: {image_sentiment}\nFocus Subject: {focus_subject}"
 
     # Resize image to default size
     cv_img = padded_resize(img, (750,350))
 
-    put_Text(cv_img,img_analysis_str,(10,10),bg_color=(0,0,0))
+    put_Text(cv_img,img_analysis_str,(10,10),bg_color=(0,0,0),outline_color=(255,255,255))
+    
+    clr = s_analyzer.map_to_dominant_color(dominant_clr)
+    show_clr(cv_img,dominant_clr,clr)
     
     # Display the image
     cv2.imshow('Unique-img', cv_img)

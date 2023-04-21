@@ -2,7 +2,14 @@
 
 common_case = ""
 display = False
+display_face_analysis = False
+
+debug = False
 # Main Variables
+
+
+# Models
+deep_sentiment_analyzer = "hybrid_finetuned_fc6+" # "hybrid_finetuned_all"
 
 
 # Testing Variables
