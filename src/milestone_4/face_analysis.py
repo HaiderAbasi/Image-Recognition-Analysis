@@ -64,7 +64,7 @@ def analyze_faces(image):
 if __name__ == "__main__":
     
     #img = cv2.imread(r"src\milestone_4\happyandangry.png")
-    img = cv2.imread(r"src\milestone_4\faces.jpg")
+    img = cv2.imread(r"src\milestone_4\human-emotion-facts.jpg")
     
     general_emotion = analyze_faces(img)
     

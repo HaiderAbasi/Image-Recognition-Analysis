@@ -1,6 +1,6 @@
 # Config file for Image Recognition Analysis Repo.
 
-common_case = ""
+common_case = "_full"
 display = False
 display_face_analysis = False
 

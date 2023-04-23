@@ -16,6 +16,7 @@ from milestone_3.age_classification import AgeClassifier
 from milestone_4.face_analysis import analyze_faces
 from milestone_4.visual_sentiment_analysis import SentimentAnalyzer
 from milestone_4.deep_sentiment_analysis import compute_img_sentiment
+from milestone_5.text_detection import Text_detector
 
 from utilities import put_Text,padded_resize,show_clr
 
@@ -25,6 +26,7 @@ class ImageAnalysis:
     def __init__(self):    
         self.pc = PeopleCounter()
         self.img_sentiment_analyzer = SentimentAnalyzer()
+        self.text_detector = Text_detector()
         self.img = None
         
     emotion_to_sentiment = {"angry": "negative","disgust": "negative","fear": "negative",
@@ -56,10 +58,12 @@ class ImageAnalysis:
         else:
             focus_subject = "-"
             image_sentiment = self.emotion_to_sentiment[human_emotion]
+            
+        text_present = self.text_detector.is_text_present(img_path)
 
 
         # Return the result as a tuple
-        return (image_id, dominant_clr, clr,saturation,sat_level, brightness,brightness_level,focus_subject,people_boxes,human_emotion,image_sentiment)
+        return (image_id, dominant_clr, clr,saturation,sat_level, brightness,brightness_level,focus_subject,people_boxes,human_emotion,image_sentiment,text_present)
 
 
 def download_missing_model_files():
@@ -103,7 +107,7 @@ def main():
     with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
         futures = [executor.submit(image_analysis.analyze, row) for _, row in unique_images.iterrows()]
         for future in concurrent.futures.as_completed(futures):
-            image_id, dominant_clr,clr, sat,sat_level, brightness, brightness_level,focus_subject,people_boxes,human_emotion,image_sentiment = future.result()
+            image_id, dominant_clr,clr, sat,sat_level, brightness, brightness_level,focus_subject,people_boxes,human_emotion,image_sentiment,text_present = future.result()
             
             # Load the image
             img_path = os.path.join(config.data_dir, image_id)
@@ -147,6 +151,9 @@ def main():
             
             # Add a new column for the max brightness
             df.loc[(df['image_id'] == image_id) | (df['duplicate_of'] == image_id), 'focus_subject'] = focus_subject
+            
+            # Add a new column for the max brightness
+            df.loc[(df['image_id'] == image_id) | (df['duplicate_of'] == image_id), 'text_present'] = text_present
 
 
 
@@ -158,7 +165,7 @@ def main():
                 cv_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
                 
                 # Add the number of duplicates on the top right corner of the image
-                img_analysis_str = f"(Color,Sat,Brig): {dominant_clr, sat_level, brightness_level}\n{adults+children} People ({adults} adults & {children} children)\nHuman emotion: {human_emotion} - Image sentiment: {image_sentiment}\nFocus Subject: {focus_subject}"
+                img_analysis_str = f"(Color,Sat,Brig): {dominant_clr, sat_level, brightness_level}\n{adults+children} People ({adults} adults & {children} children)\nHuman emotion: {human_emotion} - Image sentiment: {image_sentiment}\nFocus Subject: {focus_subject} - Text present: {text_present}"
 
                 # Resize image to default size
                 cv_img = padded_resize(cv_img, (750,350))
